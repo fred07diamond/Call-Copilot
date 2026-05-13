@@ -21,9 +21,9 @@ export default runMigrations(
     uploaded_at TEXT NOT NULL,
     keyword_count INTEGER NOT NULL DEFAULT 0
   );
-  ALTER TABLE call_copilot_watch_keywords ADD COLUMN source_type TEXT NOT NULL DEFAULT 'manual';
-  ALTER TABLE call_copilot_watch_keywords ADD COLUMN pdf_id TEXT;
-  ALTER TABLE call_copilot_watch_keywords ADD COLUMN source_label TEXT`,
+  ALTER TABLE call_copilot_watch_keywords ADD COLUMN IF NOT EXISTS source_type TEXT NOT NULL DEFAULT 'manual';
+  ALTER TABLE call_copilot_watch_keywords ADD COLUMN IF NOT EXISTS pdf_id TEXT;
+  ALTER TABLE call_copilot_watch_keywords ADD COLUMN IF NOT EXISTS source_label TEXT`,
     },
     {
       version: 3,
@@ -89,10 +89,10 @@ export default runMigrations(
     },
     {
       version: 6,
-      sql: `ALTER TABLE call_copilot_speaker_settings ADD COLUMN auto_label_enabled INTEGER NOT NULL DEFAULT 1;
-  ALTER TABLE call_copilot_speaker_settings ADD COLUMN labeling_frequency_seconds INTEGER NOT NULL DEFAULT 30;
-  ALTER TABLE call_copilot_speaker_settings ADD COLUMN call_context_hint TEXT NOT NULL DEFAULT '';
-  ALTER TABLE call_copilot_speaker_settings ADD COLUMN run_final_pass_on_save INTEGER NOT NULL DEFAULT 1`,
+      sql: `ALTER TABLE call_copilot_speaker_settings ADD COLUMN IF NOT EXISTS auto_label_enabled INTEGER NOT NULL DEFAULT 1;
+  ALTER TABLE call_copilot_speaker_settings ADD COLUMN IF NOT EXISTS labeling_frequency_seconds INTEGER NOT NULL DEFAULT 30;
+  ALTER TABLE call_copilot_speaker_settings ADD COLUMN IF NOT EXISTS call_context_hint TEXT NOT NULL DEFAULT '';
+  ALTER TABLE call_copilot_speaker_settings ADD COLUMN IF NOT EXISTS run_final_pass_on_save INTEGER NOT NULL DEFAULT 1`,
     },
   ],
   { table: "call_copilot_migrations" },
