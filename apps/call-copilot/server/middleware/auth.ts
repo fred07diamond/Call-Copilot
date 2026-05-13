@@ -10,6 +10,13 @@
 import { defineEventHandler } from "h3";
 import { runAuthGuard } from "@agent-native/core/server";
 
+// These paths bypass the auth guard (public endpoints)
+const PUBLIC_PATHS = ["/api/dev-login"];
+
 export default defineEventHandler(async (event) => {
+  const url = event.path?.split("?")[0] ?? "";
+  if (PUBLIC_PATHS.some((p) => url === p || url.startsWith(p + "/"))) {
+    return;
+  }
   return runAuthGuard(event);
 });
