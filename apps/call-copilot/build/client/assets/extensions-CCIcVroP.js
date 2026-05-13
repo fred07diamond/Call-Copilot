@@ -1,0 +1,1 @@
+import{t as e}from"./jsx-runtime-Bt3--LJM.js";import{M as t,s as n}from"./chunk-5KNZJZUH-O-xwYq91.js";var r=e(),i=t(function(){return(0,r.jsx)(n,{})});export{i as default};

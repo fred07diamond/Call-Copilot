@@ -1,0 +1,47 @@
+import { resource, tapState, tapCallback } from "@assistant-ui/tap";
+export const DataRenderers = resource(() => {
+    const [state, setState] = tapState(() => ({
+        renderers: {},
+        fallbacks: [],
+    }));
+    const setDataUI = tapCallback((name, render) => {
+        setState((prev) => {
+            return {
+                ...prev,
+                renderers: {
+                    ...prev.renderers,
+                    [name]: [...(prev.renderers[name] ?? []), render],
+                },
+            };
+        });
+        return () => {
+            setState((prev) => {
+                return {
+                    ...prev,
+                    renderers: {
+                        ...prev.renderers,
+                        [name]: prev.renderers[name]?.filter((r) => r !== render) ?? [],
+                    },
+                };
+            });
+        };
+    }, []);
+    const setFallbackDataUI = tapCallback((render) => {
+        setState((prev) => ({
+            ...prev,
+            fallbacks: [...prev.fallbacks, render],
+        }));
+        return () => {
+            setState((prev) => ({
+                ...prev,
+                fallbacks: prev.fallbacks.filter((r) => r !== render),
+            }));
+        };
+    }, []);
+    return {
+        getState: () => state,
+        setDataUI,
+        setFallbackDataUI,
+    };
+});
+//# sourceMappingURL=DataRenderers.js.map

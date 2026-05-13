@@ -1,0 +1,1 @@
+import{t as e}from"./jsx-runtime-Bt3--LJM.js";import{M as t}from"./chunk-5KNZJZUH-O-xwYq91.js";import{t as n}from"./extensions-C9x0eTuW.js";var r=e();function i(){return[{title:`Tool — Starter`}]}var a=t(function(){return(0,r.jsx)(n,{})});export{a as default,i as meta};

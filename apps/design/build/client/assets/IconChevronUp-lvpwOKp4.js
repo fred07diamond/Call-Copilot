@@ -1,0 +1,1 @@
+import{L as e}from"./tooltip-W4kfBlCZ.js";var t=e(`outline`,`chevron-up`,`ChevronUp`,[[`path`,{d:`M6 15l6 -6l6 6`,key:`svg-0`}]]);export{t};

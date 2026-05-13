@@ -1,0 +1,1 @@
+import"./client-BnbdMIkb.js";function e(e){return/\.neon\.tech([:/?]|$)/.test(e)}export{e as isNeonUrl};

@@ -1,0 +1,12 @@
+import { RemoteThreadListThreadListRuntimeCore } from "../react/runtimes/RemoteThreadListThreadListRuntimeCore.js";
+import type { RemoteThreadListAdapter } from "../runtimes/remote-thread-list/types.js";
+import type { ModelContextProvider } from "../model-context/types.js";
+export declare function deferred<T>(): {
+    promise: Promise<T>;
+    resolve: (value: T) => void;
+    reject: (reason?: unknown) => void;
+};
+export declare const contextProvider: ModelContextProvider;
+export declare function makeAdapter(overrides?: Partial<RemoteThreadListAdapter>): RemoteThreadListAdapter;
+export declare function createCore(adapter: RemoteThreadListAdapter, threadId?: string): RemoteThreadListThreadListRuntimeCore;
+//# sourceMappingURL=remote-thread-list-test-helpers.d.ts.map

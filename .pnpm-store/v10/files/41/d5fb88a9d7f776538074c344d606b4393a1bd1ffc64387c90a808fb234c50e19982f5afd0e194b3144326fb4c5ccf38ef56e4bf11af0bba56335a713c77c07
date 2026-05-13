@@ -1,0 +1,77 @@
+import { getThreadMessageText } from "../../utils/text.js";
+import { attachmentsEqual, liftNonTextParts } from "../../adapters/attachment.js";
+import { BaseComposerRuntimeCore } from "./base-composer-runtime-core.js";
+export class DefaultEditComposerRuntimeCore extends BaseComposerRuntimeCore {
+    runtime;
+    endEditCallback;
+    get canCancel() {
+        return true;
+    }
+    getAttachmentAdapter() {
+        return this.runtime.adapters?.attachments;
+    }
+    getDictationAdapter() {
+        return this.runtime.adapters?.dictation;
+    }
+    _previousText;
+    _previousAttachments;
+    _nonTextPassthrough;
+    _parentId;
+    _sourceId;
+    constructor(runtime, endEditCallback, { parentId, message }) {
+        super();
+        this.runtime = runtime;
+        this.endEditCallback = endEditCallback;
+        this._parentId = parentId;
+        this._sourceId = message.id;
+        this._previousText = getThreadMessageText(message);
+        this.setText(this._previousText);
+        this.setRole(message.role);
+        if (message.role === "user") {
+            this._previousAttachments = [
+                ...(message.attachments ?? []),
+                ...liftNonTextParts(message.content),
+            ];
+            this._nonTextPassthrough = [];
+        }
+        else {
+            this._previousAttachments = message.attachments ?? [];
+            this._nonTextPassthrough = message.content.filter((p) => p.type !== "text");
+        }
+        this.setAttachments(this._previousAttachments);
+        this.setRunConfig({ ...runtime.composer.runConfig });
+    }
+    get parentId() {
+        return this._parentId;
+    }
+    get sourceId() {
+        return this._sourceId;
+    }
+    async handleSend(message, options) {
+        const text = getThreadMessageText(message);
+        const attachmentsChanged = !attachmentsEqual(message.attachments ?? [], this._previousAttachments);
+        if (text !== this._previousText ||
+            attachmentsChanged ||
+            options?.startRun) {
+            const content = this._nonTextPassthrough.length > 0
+                ? [
+                    ...message.content,
+                    ...this._nonTextPassthrough,
+                ]
+                : message.content;
+            this.runtime.append({
+                ...message,
+                content,
+                parentId: this._parentId,
+                sourceId: this._sourceId,
+                startRun: options?.startRun,
+            });
+        }
+        this.handleCancel();
+    }
+    handleCancel() {
+        this.endEditCallback();
+        this._notifySubscribers();
+    }
+}
+//# sourceMappingURL=default-edit-composer-runtime-core.js.map

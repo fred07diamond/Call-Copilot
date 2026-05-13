@@ -1,0 +1,1 @@
+import"./client-0FAg5A5C.js";typeof window<`u`&&window.postMessage,typeof window<`u`&&window.postMessage;

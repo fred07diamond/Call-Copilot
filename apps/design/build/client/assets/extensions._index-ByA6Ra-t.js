@@ -1,0 +1,1 @@
+import{t as e}from"./jsx-runtime-Sqb0pJFF.js";import{N as t}from"./chunk-5KNZJZUH-CoIz2O7B.js";import{n}from"./extensions-CChyDMGC.js";var r=e();function i(){return[{title:`Extensions — Design`}]}var a=t(function(){return(0,r.jsx)(n,{})});export{a as default,i as meta};

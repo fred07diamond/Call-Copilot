@@ -1,0 +1,1 @@
+import{R as e}from"./tooltip-yVTX--9K.js";var t=e(`outline`,`brand-telegram`,`BrandTelegram`,[[`path`,{d:`M15 10l-4 4l6 6l4 -16l-18 7l4 2l2 6l3 -4`,key:`svg-0`}]]);export{t};

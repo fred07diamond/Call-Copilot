@@ -1,0 +1,48 @@
+import { vi } from "vitest";
+import { RemoteThreadListThreadListRuntimeCore } from "../react/runtimes/RemoteThreadListThreadListRuntimeCore.js";
+export function deferred() {
+    let resolve;
+    let reject;
+    const promise = new Promise((res, rej) => {
+        resolve = res;
+        reject = rej;
+    });
+    return { promise, resolve, reject };
+}
+export const contextProvider = {
+    getModelContext: () => ({}),
+    subscribe: () => () => { },
+};
+export function makeAdapter(overrides = {}) {
+    return {
+        list: vi.fn(async () => ({ threads: [] })),
+        initialize: vi.fn(async (threadId) => ({
+            remoteId: threadId,
+            externalId: threadId,
+        })),
+        rename: vi.fn(async () => { }),
+        archive: vi.fn(async () => { }),
+        unarchive: vi.fn(async () => { }),
+        delete: vi.fn(async () => { }),
+        generateTitle: vi.fn(async () => new ReadableStream({
+            start(c) {
+                c.close();
+            },
+        })),
+        fetch: vi.fn(async (id) => ({
+            status: "regular",
+            remoteId: id,
+            externalId: id,
+            title: "Test",
+        })),
+        ...overrides,
+    };
+}
+export function createCore(adapter, threadId) {
+    const core = new RemoteThreadListThreadListRuntimeCore({ adapter, runtimeHook: () => ({}), threadId }, contextProvider);
+    // `startThreadRuntime` blocks until a React component attaches a runtime;
+    // stub it so non-React unit tests don't hang.
+    core._hookManager.startThreadRuntime = async () => ({});
+    return core;
+}
+//# sourceMappingURL=remote-thread-list-test-helpers.js.map

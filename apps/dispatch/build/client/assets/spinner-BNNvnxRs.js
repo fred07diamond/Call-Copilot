@@ -1,0 +1,1 @@
+import{t as e}from"./jsx-runtime-M4lD1_vD.js";import{I as t}from"./tooltip-yVTX--9K.js";import{r as n}from"./useBuilderStatus-CAf7KHBQ.js";import"./utils-CYoBlNDM.js";var r=e();function i({className:e,...i}){return(0,r.jsx)(n,{role:`status`,"aria-label":`Loading`,className:t(`size-4 animate-spin`,e),...i})}export{i as t};

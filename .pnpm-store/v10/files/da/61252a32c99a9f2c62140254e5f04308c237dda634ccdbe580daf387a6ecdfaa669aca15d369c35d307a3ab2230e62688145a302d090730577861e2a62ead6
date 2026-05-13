@@ -1,0 +1,5 @@
+import { type RefObject } from "react";
+import type { ThreadHistoryAdapter } from "../../../adapters/thread-history.js";
+import { type AssistantCloud } from "assistant-cloud";
+export declare function useAssistantCloudThreadHistoryAdapter(cloudRef: RefObject<AssistantCloud>): ThreadHistoryAdapter;
+//# sourceMappingURL=AssistantCloudThreadHistoryAdapter.d.ts.map

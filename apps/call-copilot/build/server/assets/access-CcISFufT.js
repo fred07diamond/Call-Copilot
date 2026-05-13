@@ -1,0 +1,167 @@
+import { l as sql } from "./sql-D8aUs1Ib.js";
+import { r as eq, t as and, x as or } from "./conditions-BBjHIT-o.js";
+import { i as getRequestOrgId, o as getRequestUserEmail } from "./request-context-BQ-cTIMw.js";
+import { a as ROLE_RANK } from "./schema-SN1ZPfo8.js";
+//#region ../../node_modules/.pnpm/@agent-native+core@0.14.8_d8cd0b9ea502c97d2f2b6c28b2fc9a81/node_modules/@agent-native/core/dist/sharing/registry.js
+/**
+* Registry of shareable resources.
+*
+* Each template registers its ownable resource(s) once on module load so the
+* framework-level share actions (`share-resource`, `list-resource-shares`,
+* etc.) can dispatch to the correct tables.
+*
+*   import { registerShareableResource } from "@agent-native/core/sharing";
+*   import * as schema from "./schema.js";
+*
+*   registerShareableResource({
+*     type: "document",
+*     resourceTable: schema.documents,
+*     sharesTable: schema.documentShares,
+*     displayName: "Document",
+*     titleColumn: "title",
+*   });
+*/
+var REGISTRY_KEY = "__agentNativeShareableResources__";
+var globalRegistry = globalThis;
+function getRegistry() {
+	let r = globalRegistry[REGISTRY_KEY];
+	if (!r) {
+		r = /* @__PURE__ */ new Map();
+		globalRegistry[REGISTRY_KEY] = r;
+	}
+	return r;
+}
+function registerShareableResource(entry) {
+	getRegistry().set(entry.type, entry);
+}
+function requireShareableResource(type) {
+	const entry = getRegistry().get(type);
+	if (!entry) throw new Error(`Unknown shareable resource type: "${type}". Did you forget registerShareableResource()?`);
+	return entry;
+}
+//#endregion
+//#region ../../node_modules/.pnpm/@agent-native+core@0.14.8_d8cd0b9ea502c97d2f2b6c28b2fc9a81/node_modules/@agent-native/core/dist/sharing/access.js
+/**
+* Access-control helpers for shareable resources.
+*
+* The access model combines:
+* 1. Direct ownership — `owner_email = currentUser`.
+* 2. Visibility — `'private' | 'org' | 'public'`. `org` grants read to anyone
+*    in the same org; `public` grants read to any authenticated user.
+* 3. Share rows — per-user or per-org grants in the `{type}_shares` table
+*    with a role (`viewer | editor | admin`).
+*
+* Use `applyAccessFilter()` on list/read queries to filter rows the current
+* user can see. Use `assertAccess()` at the top of write actions to reject
+* callers who lack the required role.
+*/
+var ForbiddenError = class extends Error {
+	statusCode = 403;
+	constructor(message = "Forbidden") {
+		super(message);
+		this.name = "ForbiddenError";
+	}
+};
+/** Current request's access context. Pulls from request-context ALS. */
+function currentAccess() {
+	return {
+		userEmail: getRequestUserEmail(),
+		orgId: getRequestOrgId()
+	};
+}
+/**
+* Build a Drizzle `WHERE` clause that admits rows the current user can see.
+* Pass the ownable resource table and its shares table; optional min role
+* (defaults to 'viewer') gates which share rows count.
+*
+* `visibility = 'public'` is intentionally NOT admitted by default. Public
+* means "anyone with the link can view" (still honoured by `resolveAccess`
+* for read-by-id), not "appears in every signed-in user's list/sidebar."
+* Pass `{ includePublic: true }` for the rare list endpoint that wants
+* cross-user public discovery (a public template gallery, for example).
+*
+* Example:
+*
+*   const rows = await db
+*     .select()
+*     .from(schema.documents)
+*     .where(accessFilter(schema.documents, schema.documentShares));
+*/
+function accessFilter(resourceTable, sharesTable, ctx = currentAccess(), minRole = "viewer", options = {}) {
+	const { userEmail, orgId } = ctx;
+	const { includePublic = false } = options;
+	const clauses = [];
+	if (userEmail) clauses.push(eq(resourceTable.ownerEmail, userEmail));
+	if (minRole === "viewer") {
+		if (includePublic) clauses.push(eq(resourceTable.visibility, "public"));
+		if (orgId) clauses.push(and(eq(resourceTable.visibility, "org"), eq(resourceTable.orgId, orgId)));
+	}
+	if (userEmail) clauses.push(sql`exists (select 1 from ${sharesTable}
+                  where ${sharesTable.resourceId} = ${resourceTable.id}
+                    and ${sharesTable.principalType} = 'user'
+                    and ${sharesTable.principalId} = ${userEmail}
+                    and ${minRoleSql(minRole)})`);
+	if (orgId) clauses.push(sql`exists (select 1 from ${sharesTable}
+                  where ${sharesTable.resourceId} = ${resourceTable.id}
+                    and ${sharesTable.principalType} = 'org'
+                    and ${sharesTable.principalId} = ${orgId}
+                    and ${minRoleSql(minRole)})`);
+	return or(...clauses) ?? sql`1=0`;
+}
+function minRoleSql(minRole) {
+	if (minRole === "viewer") return sql`1=1`;
+	if (minRole === "editor") return sql`role in ('editor','admin')`;
+	return sql`role = 'admin'`;
+}
+/**
+* Return the effective role the current user has on a specific resource, or
+* null if they have no access. Loads the resource and relevant share rows.
+*/
+async function resolveAccess(resourceType, resourceId, ctx = currentAccess()) {
+	const reg = requireShareableResource(resourceType);
+	const [resource] = await reg.getDb().select().from(reg.resourceTable).where(eq(reg.resourceTable.id, resourceId));
+	if (!resource) return null;
+	const { userEmail, orgId } = ctx;
+	if (userEmail && resource.ownerEmail === userEmail) return {
+		role: "owner",
+		resource
+	};
+	if (resource.visibility === "public") return {
+		role: await highestShareRole(reg, resourceId, ctx) ?? "viewer",
+		resource
+	};
+	if (resource.visibility === "org" && orgId && resource.orgId === orgId) return {
+		role: await highestShareRole(reg, resourceId, ctx) ?? "viewer",
+		resource
+	};
+	const role = await highestShareRole(reg, resourceId, ctx);
+	if (role) return {
+		role,
+		resource
+	};
+	return null;
+}
+async function highestShareRole(reg, resourceId, ctx) {
+	const { userEmail, orgId } = ctx;
+	if (!userEmail && !orgId) return null;
+	const db = reg.getDb();
+	const principalClauses = [];
+	if (userEmail) principalClauses.push(and(eq(reg.sharesTable.principalType, "user"), eq(reg.sharesTable.principalId, userEmail)));
+	if (orgId) principalClauses.push(and(eq(reg.sharesTable.principalType, "org"), eq(reg.sharesTable.principalId, orgId)));
+	const rows = await db.select({ role: reg.sharesTable.role }).from(reg.sharesTable).where(and(eq(reg.sharesTable.resourceId, resourceId), or(...principalClauses))).limit(10);
+	let best = null;
+	for (const r of rows) if (!best || ROLE_RANK[r.role] > ROLE_RANK[best]) best = r.role;
+	return best;
+}
+/**
+* Throw ForbiddenError if the current user can't act on this resource with at
+* least the given role. Used at the top of update/delete actions.
+*/
+async function assertAccess(resourceType, resourceId, minRole = "viewer", ctx = currentAccess()) {
+	const access = await resolveAccess(resourceType, resourceId, ctx);
+	if (!access) throw new ForbiddenError(`No access to ${resourceType} ${resourceId}`);
+	if (ROLE_RANK[access.role] < ROLE_RANK[minRole]) throw new ForbiddenError(`Requires ${minRole} role on ${resourceType} ${resourceId} (have ${access.role})`);
+	return access;
+}
+//#endregion
+export { registerShareableResource as a, resolveAccess as i, accessFilter as n, requireShareableResource as o, assertAccess as r, ForbiddenError as t };

@@ -1,0 +1,74 @@
+"use client";
+import { jsx as _jsx, Fragment as _Fragment } from "react/jsx-runtime";
+import { Fragment, useMemo } from "react";
+import { useAuiState } from "@assistant-ui/store";
+import { useShallow } from "zustand/shallow";
+import { buildGroupTree, normalizeGroupKey, } from "../../utils/groupParts.js";
+import { MessagePartChildren } from "./MessageParts.js";
+const COMPLETE_STATUS = Object.freeze({ type: "complete" });
+/**
+ * `children` placeholder passed for leaf-part renders. Leaf parts have no
+ * inner subtree; rendering this sentinel signals the consumer wrote
+ * `default: return children;` and accidentally fell through for a part —
+ * surface the bug loudly instead of silently rendering nothing.
+ */
+const PartChildrenSentinel = () => {
+    throw new Error("MessagePrimitive.GroupedParts: rendered `children` under a leaf " +
+        "part. `children` is only meaningful for `group-…` cases — add a " +
+        "matching case for the part type or return `null` to skip it.");
+};
+const renderNode = (node, parts, render) => {
+    if (node.type === "part") {
+        return (_jsx(MessagePartChildren, { index: node.index, children: ({ part }) => render({ part, children: _jsx(PartChildrenSentinel, {}) }) }, node.nodeKey));
+    }
+    const status = parts[node.indices.at(-1)]?.status ?? COMPLETE_STATUS;
+    const groupPart = {
+        type: node.key,
+        status,
+        indices: node.indices,
+    };
+    return (_jsx(Fragment, { children: render({
+            part: groupPart,
+            children: (_jsx(_Fragment, { children: node.children.map((child) => renderNode(child, parts, render)) })),
+        }) }, node.nodeKey));
+};
+/**
+ * Groups adjacent message parts into a tree of coalesced runs and
+ * renders each node — group or part — through a single `children`
+ * function.
+ *
+ * The render function receives `{ part, children }` where `part.type`
+ * is either a `"group-…"` literal (for a group, `children` is the
+ * recursively-rendered subtree) or a real part type (`"text"`,
+ * `"tool-call"`, …) for a leaf (`children` is a sentinel that throws
+ * if rendered — use `part.type` to distinguish).
+ *
+ * @example
+ * ```tsx
+ * <MessagePrimitive.GroupedParts
+ *   groupBy={(part) =>
+ *     part.type === "reasoning" ? ["group-thought", "group-reasoning"] :
+ *     part.type === "tool-call" ? ["group-thought", "group-tool"] :
+ *     null
+ *   }
+ * >
+ *   {({ part, children }) => {
+ *     switch (part.type) {
+ *       case "group-thought":   return <Thought>{children}</Thought>;
+ *       case "group-reasoning": return <Reasoning>{children}</Reasoning>;
+ *       case "group-tool":      return <ToolStack>{children}</ToolStack>;
+ *       case "text":            return <MarkdownText />;
+ *       case "tool-call":       return part.toolUI ?? <ToolFallback {...part} />;
+ *       default:                return null;
+ *     }
+ *   }}
+ * </MessagePrimitive.GroupedParts>
+ * ```
+ */
+export const MessagePrimitiveGroupedParts = ({ groupBy, children, }) => {
+    const parts = useAuiState(useShallow((s) => s.message.parts));
+    const tree = useMemo(() => buildGroupTree(parts.map((part, i) => normalizeGroupKey(groupBy(part, i, parts)))), [parts, groupBy]);
+    return _jsx(_Fragment, { children: tree.map((node) => renderNode(node, parts, children)) });
+};
+MessagePrimitiveGroupedParts.displayName = "MessagePrimitive.GroupedParts";
+//# sourceMappingURL=MessageGroupedParts.js.map

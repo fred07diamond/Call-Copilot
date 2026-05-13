@@ -1,0 +1,1 @@
+function e(e){return e.status===`pending`?e.builderUrl||null:e.path||e.url||null}function t(e){return e.status===`pending`&&!!e.builderUrl}export{e as n,t};
