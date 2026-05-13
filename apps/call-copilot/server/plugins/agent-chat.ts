@@ -8,6 +8,8 @@ import actionsRegistry from "../../.generated/actions-registry.js";
 export default createAgentChatPlugin({
   appId: "call-copilot",
   resolveOrgId: async (event) => (await getOrgContext(event)).orgId,
+  anonymousOwner: () => "owner@call-copilot.local",
+  anonymousReadOnly: false,
   actions: loadActionsFromStaticRegistry(actionsRegistry),
   systemPrompt: `You are Call Copilot, a sidebar assistant for live sales calls and post-call analysis.
 
