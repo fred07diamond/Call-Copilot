@@ -1,5 +1,6 @@
 import { defineEventHandler, sendRedirect } from "h3";
-import { addSession, setFrameworkSessionCookie } from "@agent-native/core/server";
+import { addSession } from "@agent-native/core/server";
+import { setFrameworkSessionCookie } from "@agent-native/core/dist/server/auth.js";
 import { getBetterAuth } from "@agent-native/core/dist/server/better-auth-instance.js";
 
 const DEV_EMAIL = "owner@call-copilot.local";
