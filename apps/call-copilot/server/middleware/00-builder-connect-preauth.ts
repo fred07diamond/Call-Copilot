@@ -22,10 +22,11 @@ import {
   setCookie,
   sendRedirect,
   getQuery,
+  getRequestURL,
 } from "h3";
 import { addSession } from "@agent-native/core/server";
 
-const BUILDER_CONNECT_PATH = "/_agent-native/builder/connect";
+const BUILDER_CONNECT_SUFFIX = "/_agent-native/builder/connect";
 const CONNECT_PARAM = "_an_connect";
 const SESSION_COOKIE = "an_session_workspace";
 // Must match the framework's BUILDER_STATE_TTL_MS (5 minutes)
@@ -72,7 +73,8 @@ function extractEmailFromConnectToken(token: string): string | null {
 
 export default defineEventHandler(async (event) => {
   const path = event.path?.split("?")[0] ?? "";
-  if (path !== BUILDER_CONNECT_PATH) return;
+  // Match both bare path and path with APP_BASE_PATH prefix (e.g. /call-copilot).
+  if (!path.endsWith(BUILDER_CONNECT_SUFFIX)) return;
 
   // If a session cookie already exists, no need to bootstrap one
   if (getCookie(event, SESSION_COOKIE)) return;
@@ -91,13 +93,19 @@ export default defineEventHandler(async (event) => {
   const sessionToken = randomBytes(24).toString("base64url");
   await addSession(sessionToken, email);
 
-  // Set the cookie on the CURRENT domain (the public Fusion URL the popup hit).
-  // Short max-age is enough — we just need it to survive one redirect.
+  // Determine whether the request arrived over HTTPS (Fusion cloud) or plain
+  // HTTP (local dev). SameSite=None requires Secure; on localhost we fall back
+  // to SameSite=Lax so the cookie is actually stored and sent on the redirect.
+  const requestUrl = getRequestURL(event);
+  const isSecure =
+    requestUrl.protocol === "https:" ||
+    process.env.NODE_ENV === "production";
+
   setCookie(event, SESSION_COOKIE, sessionToken, {
     httpOnly: true,
-    sameSite: "none",
-    secure: true,
-    partitioned: true,
+    sameSite: isSecure ? "none" : "lax",
+    secure: isSecure,
+    ...(isSecure ? { partitioned: true } : {}),
     path: "/",
     maxAge: 300, // 5 min — enough to complete the connect flow
   });
@@ -105,5 +113,5 @@ export default defineEventHandler(async (event) => {
   // Redirect to the same path+query. The browser will re-issue the request
   // with the new cookie, and the auth guard will succeed.
   const search = event.url?.search ?? `?${CONNECT_PARAM}=${connectToken}`;
-  return sendRedirect(event, `${BUILDER_CONNECT_PATH}${search}`, 302);
+  return sendRedirect(event, `${path}${search}`, 302);
 });
