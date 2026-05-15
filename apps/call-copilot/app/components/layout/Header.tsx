@@ -1,7 +1,7 @@
 import { useLocation } from "react-router";
-import { IconMenu2 } from "@tabler/icons-react";
+import { IconMenu2, IconMessageDots } from "@tabler/icons-react";
 import { useHeaderTitle, useHeaderActions } from "./HeaderActions";
-import { AgentToggleButton } from "@agent-native/core/client";
+import { cn } from "@/lib/utils";
 const pageTitles: Record<string, string> = {
   "/": "Call Copilot",
   "/settings": "Settings",
@@ -16,9 +16,11 @@ function resolveTitle(pathname: string): string {
 
 interface HeaderProps {
   onOpenMobileSidebar?: () => void;
+  onToggleAgent?: () => void;
+  agentOpen?: boolean;
 }
 
-export function Header({ onOpenMobileSidebar }: HeaderProps) {
+export function Header({ onOpenMobileSidebar, onToggleAgent, agentOpen }: HeaderProps) {
   const location = useLocation();
   const title = useHeaderTitle();
   const actions = useHeaderActions();
@@ -44,7 +46,20 @@ export function Header({ onOpenMobileSidebar }: HeaderProps) {
       </div>
       <div className="flex items-center gap-2 shrink-0">
         {actions}
-        <AgentToggleButton />
+        <button
+          type="button"
+          aria-label="Toggle agent"
+          onClick={onToggleAgent}
+          title={agentOpen ? "Close agent" : "Open agent"}
+          className={cn(
+            "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            agentOpen
+              ? "bg-accent/40 text-foreground"
+              : "text-muted-foreground hover:bg-accent/40 hover:text-foreground",
+          )}
+        >
+          <IconMessageDots size={20} aria-hidden />
+        </button>
       </div>
     </header>
   );

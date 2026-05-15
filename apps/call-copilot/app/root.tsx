@@ -116,7 +116,24 @@ function AppContent() {
 }
 
 export default function Root() {
-  const [queryClient] = useState(() => new QueryClient());
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            // Don't hammer the dev server immediately when the tab regains
+            // focus — the server may be mid-restart. Queries are already
+            // fresh for 30 s so a focus-refetch rarely adds real value.
+            refetchOnWindowFocus: false,
+            // Retry failed fetches up to 2 times, with exponential back-off
+            // so a brief server restart doesn't surface errors to the user.
+            retry: 2,
+            retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 10_000),
+            staleTime: 30_000,
+          },
+        },
+      }),
+  );
   return (
     <ClientOnly fallback={<DefaultSpinner />}>
       <ThemeProvider

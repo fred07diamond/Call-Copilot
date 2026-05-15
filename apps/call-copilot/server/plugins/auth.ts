@@ -1,8 +1,7 @@
-import { defaultAuthPlugin as frameworkDefault } from "@agent-native/core/server";
-import * as workspaceServer from "@my-platform/shared/server";
+import { createAuthPlugin } from "@agent-native/core/server";
 
-const workspacePlugin = (workspaceServer as Record<string, unknown>).defaultAuthPlugin;
+// /api/dev-login must be public so unauthenticated users can bootstrap a
+// session without hitting the auth guard at the framework middleware level.
+const PUBLIC_PATHS = ["/api/dev-login", "/api/auth-debug", "/api/builder-connect-capture"];
 
-export default typeof workspacePlugin === "function"
-  ? workspacePlugin
-  : frameworkDefault;
+export default createAuthPlugin({ publicPaths: PUBLIC_PATHS });
